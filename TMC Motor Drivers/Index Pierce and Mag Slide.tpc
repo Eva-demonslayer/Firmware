@@ -1,0 +1,143 @@
+//Script Assumptions
+//Module 1 = TMC5130, MTR0 = 0.33A at 12V
+//Module 2 = TMC5272, MTR1 = 0.5A at 24V, MTR2 = 0.5A at 24V 
+//Note module 2 is actually run at 20V per TMC5272 board parameters
+//Motors are starting at correct origin orientation
+//MTR0 Top of Z axis, MTR1 Closest to MTR on X axis, MTR2 Flush with surface in Y axis
+//Degrees of Freedom – MTR0 at res = 2 [0,475] , MTR1 at res = 16 [0,-360000], MTR2 at res = 2 [0,2500]
+
+//------------------------------------------------Define Global Var
+MTR0 = 0						//Motor 1 of Module 1
+MTR1 = 0						//Motor 1 of Module 2
+MTR2 = 1						//Motor 2 of Module 2
+MOD1 = 1						//Module 1
+MOD2 = 2						//Module 2
+//-----------------------------------------------Physical Environment 
+Lysis = -283000
+Wash1 = -200000
+Wash2 = -152000
+Elution = -99000
+
+//-------------------------------------------------------------------------Module 1------------------------------------
+//----------------------------------------Set Electrical Parameters
+SAP 6, MTR0, 15, MOD1					 //iRUN = 0.30 RMS when input = 12V
+SAP 9, MTR0, 1200, MOD1 				//RefV = 1200mV when input = 12V
+SAP 7, MTR0, 0, MOD1					 //iHold = 0 when input = 12V 
+
+//-------------------------------------------Kinematic Parameters
+SAP 140, MTR0, 16, MOD1				 //Resolution = 16
+SAP 4, MTR0, 600, MOD1 				//Velocity = 600
+SAP 5, MTR0, 50, MOD1 				//Accel = 50
+SAP 1, MTR0, 0, MOD1 					//Set origin
+
+//---------------------------------------------Chopper Parameters
+SAP 204, MTR0, 0, MOD1 				// Freewheeling mode
+SAP 165, MTR0, 8, MOD1 				// Chopper hysteresis end / fast decay time
+SAP 184, MTR0, 0, MOD1 				// Random TOff mode
+SAP 182, MTR0, 1048575, MOD1 			// smartEnergy threshold speed
+SAP 188, MTR0, 200, MOD1				 // PWM amplitude
+SAP 192, MTR0, 1, MOD1 				// PWM autoscale
+SAP 163, MTR0, 0, MOD1 				// Constant TOff Mode
+SAP 186, MTR0, 1048575, MOD1			 // PWM threshold speed
+SAP 191, MTR0, 1, MOD1 				// PWM frequency
+SAP 162, MTR0, 2, MOD1				 // Chopper blank time
+SAP 187, MTR0, 1, MOD1 				// PWM gradient
+SAP 167, MTR0, 5, MOD1 				// Chopper off time
+
+//-----------------------------------------------------------------------Module 2--------------------------------------------
+//------------------------------------------------------------------------MTR1
+//------------------------------------Set Electrical Parameters
+SAP 211, MTR1, 2, MOD2				//Set Current Scaling to use RRef = 15K
+SAP 6, MTR1, 31, MOD2					//Max Current
+SAP 7, MTR1, 5, MOD2					//Standby Current
+SAP 215, MTR1, 3, MOD2				//Ref Current Scaling
+SAP 212, MTR1, 3, MOD2				//Current Range
+//-----------------------------------------Chopper Parameters
+SAP 162, MTR1, 2, MOD2				//Chopper Blank Time
+SAP 163, MTR1, 1, MOD2				//Constant Toff Mode
+SAP 165, MTR1, 640, MOD2				//Chopper Hysteresis End/Fast Decay Time
+SAP 166, MTR1, 16, MOD2				//Chopper Hysteresis Start/Sine Wave Offset
+SAP 167, MTR1, 3, MOD2				//Chopper Off Time
+SAP 185, MTR1, 4, MOD2				//Chopper Synch
+SAP 186, MTR1, 372, MOD2				//PWM Threshold Velocity
+SAP 187, MTR1, 1, MOD2				//PWM Gradient
+SAP 188, MTR1, 29, MOD2				//PWM Amplitude
+SAP 191, MTR1, 1, MOD2				//PWM Frequency
+SAP 192, MTR1, 1, MOD2				//PWM Autoscale
+//-----------------------------------------Kinematic Parameters
+SAP 140, MTR1, 16, MOD2				//resolution
+SAP 4, MTR1, 50000, MOD2				//velocity = 50000
+SAP 5, MTR1, 5000, MOD2				//accel = 5000
+SAP 1, MTR1, 0, MOD2					//Set origin
+//------------------------------------------------------------------------MTR2
+//--------------------------------------Set Electrical Parameters
+SAP 211, MTR2, 2, MOD2				//Set Current Scaling to use RRef = 15K
+SAP 6, MTR2, 31, MOD2					//Max Current
+SAP 7, MTR2, 5, MOD2					//Standby Current
+SAP 215, MTR2, 3, MOD2				//Ref Current Scaling
+SAP 212, MTR2, 3, MOD2				//Current Range
+//---------------------------------------------Chopper Parameters
+SAP 162, MTR2, 2, MOD2				//Chopper Blank Time
+SAP 165, MTR2, 16, MOD2				//Chopper Hysteresis End/Fast Decay Time
+SAP 166, MTR2, 8, MOD2				//Chopper Hysteresis Start/Sine Wave Offset
+SAP 167, MTR2, 3, MOD2				//Chopper Off Time
+SAP 186, MTR2, 1048575, MOD2			//PWM Threshold Velocity
+SAP 187, MTR2, 1, MOD2				//PWM Gradient
+SAP 188, MTR2, 29, MOD2				//PWM Amplitude
+SAP 191, MTR2, 1, MOD2				//PWM Frequency
+SAP 192, MTR2, 1, MOD2				//PWM Autoscale
+SAP 215, MTR2, 3, MOD2				//Ref Current Scaling
+//-------------------------------------------Kinematic Parameters
+SAP 140, MTR2, 2, MOD2				//resolution
+SAP 4, MTR2, 2600, MOD2				//velocity = 2600
+SAP 5, MTR2, 500, MOD2				//accel = 500
+SAP 1, MTR2, 0, MOD2					//Set origin
+
+
+
+//--------------------Initiate First. Run Second---------------------------------------------------------------------
+//-------Kinematics
+MTR1Loop:
+MVP ABS, MTR1, Lysis, MOD2				//move MTR1 to -283000 “Lysis”
+	WAIT POS, MTR1, 0, MOD2				//wait
+	CSUB MTR2Loop
+	CSUB MTR0Loop
+	MVP ABS, MTR1, Wash1, MOD2				//move MTR1 to -200000 “wash 1”
+	WAIT POS, MTR1, 0, MOD2				//wait
+	CSUB MTR2Loop
+	CSUB MTR0Loop
+	MVP ABS, MTR1, Wash2, MOD2				//move MTR1 to -152000 “wash 2”
+	WAIT POS, MTR1, 0, MOD2				//wait
+	CSUB MTR2Loop
+	CSUB MTR0Loop
+	MVP ABS, MTR1, Elution, MOD2				//move MTR1 to -99000 “Elution”
+	WAIT POS, MTR1, 0, MOD2				//wait
+	CSUB MTR2Loop
+	CSUB MTR0Loop
+	MVP ABS, MTR1, 0, MOD2				//move MTR1 to 0
+	WAIT POS, MTR1, 0, MOD2				//wait
+	//JA MTR1Loop
+STOP
+
+MTR2Loop:
+	MVP ABS, MTR2, 2500, MOD2				//move MTR2 to 2500
+	WAIT POS, MTR2, 0, MOD2				//wait
+	MVP ABS, MTR2, 0, MOD2				//Move MTR2 to 0
+	WAIT POS, MTR2, 0, MOD2				//WAIT
+	RSUB							// Return to Call point
+
+MTR0Loop:
+	ROR MTR0, 600, MOD1 					//move MTR0 to 3200
+	WAIT TICKS, 0, 6000 					//wait
+	MST MTR0, MOD1
+	ROL MTR0, 600, MOD1 					//move MTR0 to 3200
+	WAIT TICKS, 0, 6000 					//wait
+	MST MTR0, MOD1
+	RSUB
+	//Note, the timing is slightly off. After one loop origin is off slightly
+
+
+
+
+#module 1  "COM9/USB/id1/LandungsbrueckeV3"  "[LandungsbrueckeV3]"
+#module 2  "COM6/USB/id1/LandungsbrueckeV3"  "[LandungsbrueckeV3]"
