@@ -1,1 +1,3 @@
-details about QR code scanner and links
+Links to barcode scanner and eval board:
+https://www.digikey.com/en/products/detail/newland-north-america-inc/EVK3030/12326536
+https://www.digikey.com/en/products/detail/newland/NLS-EM3088-W/17879084?s=N4IgTCBcDaIKIFkDMAGAHGgtAdRAXQF8g

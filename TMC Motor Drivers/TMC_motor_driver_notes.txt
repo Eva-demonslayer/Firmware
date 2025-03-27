@@ -1,1 +1,7 @@
-Notes on motor drivers - WIP
+TMC 5240 Pin Details
+-Pin 8 to GND, DRV_EN (enable)
+-Pin 30-33 SPI bus, 3.3V logic (Miso, Mosi, CLK, CS)
+-Pin 23 to GND, CLK (internal clock)
+-Pin 5 to 5V, peripherals such as home switches
+-Pin 19 to 3.3V, Sleep
+
