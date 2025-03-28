@@ -5,3 +5,6 @@ TMC 5240 Pin Details
 -Pin 5 to 5V, peripherals such as home switches
 -Pin 19 to 3.3V, Sleep
 
+Optical Encoder Details:
+720 CPR selected for linear mixing demo
+https://www.usdigital.com/products/encoders/incremental/kit/E4T
