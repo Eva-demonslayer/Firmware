@@ -1,1 +1,1 @@
-First README file
+Welcome to Ben's Repo. Here you will find various firmware projects I have worked on :) Code is open source and feel free to use it for your own development. Shoot me a message if you'd like to collaborate or have any questions.
