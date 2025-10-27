@@ -73,6 +73,19 @@ def read_register(addr):
     resp = spi.xfer2([0x00, 0x00])
     return resp[1]
 
+# set zero position to current angle
+def set_zero_position():
+    raw_bytes = spi.xfer2([Read_Angle, 0x00])       # returns [MSB, LSB]
+    msb, lsb = raw_bytes[0], raw_bytes[1]           # retrieve MSB and LSB
+    raw16 = (msb << 8) | lsb                        # 16-bit integer from sensor
+    zero_lsb = raw16 & 0xFF                         # LSB for zero setting
+    zero_msb = (raw16 >> 8) & 0xFF                  # MSB for zero setting
+    print(f"Setting zero position to raw16: {raw16} bytes: {raw_bytes}")
+    resp1, resp2 = write_register(Zero_Setting_LSB, zero_lsb)
+    print(f"Write Zero Setting LSB Response: {resp1}, {resp2}")
+    resp1, resp2 = write_register(Zero_Setting_MSB, zero_msb)
+    print(f"Write Zero Setting MSB Response: {resp1}, {resp2}")
+
 # test for continuous angle measurement
 while True:
     raw_bytes = spi.xfer2([Read_Angle, 0x00])       # returns [MSB, LSB]
