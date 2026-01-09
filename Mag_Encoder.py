@@ -1,10 +1,13 @@
 ###################### Magnetic Encoder MA780 from MPS ############################
 
+import signal
+import sys
 import spidev
 from time import sleep, time
 import os
 os.environ["GPIOZERO_PIN_FACTORY"] = "lgpio" 
-# import gpiozero
+from gpiozero import DigitalOutputDevice
+import atexit
 
 spi = spidev.SpiDev()
 spi.open(0,0)                   # specify the SPI bus and device (chip select)
@@ -44,6 +47,50 @@ Store_All_Registers = 0x06
 Restore_All_Registers = 0x05
 Clear_Error_Flag = 0x01
 
+
+# enable and disable pin control
+def enable_pin():
+    en_pin.on()
+    return en_pin.value
+def disable_pin():
+    en_pin.off()
+    return en_pin.value
+try:
+    en_pin = DigitalOutputDevice(17, active_high=True, initial_value=True)  # high = sensor active
+    pin_state = enable_pin()
+    print("Enable Pin State:", pin_state)
+except Exception as e:
+    # If claiming the pin fails, do nothing (leave en_pin as None)
+    en_pin = None
+    print(f"Warning: could not claim GPIO17: {e}")
+
+def clean_up():
+    """cleanup for en_pin and spi"""
+    for name in ("en_pin", "spi"):
+        obj = globals().get(name)
+        if obj is None:
+            continue
+        try:
+            # turn off if available (safe no-op if not)
+            getattr(obj, "off", lambda: None)()
+        except Exception:
+            pass
+        try:
+            # close if available
+            getattr(obj, "close", lambda: None)()
+        except Exception:
+            pass
+atexit.register(clean_up)
+
+# ensure cleanup on SIGINT / SIGTERM and on normal exit
+def signal_handler(*_):
+    try:
+        clean_up()
+    finally:
+        sys.exit(0)
+signal.signal(signal.SIGINT, signal_handler)   # Ctrl-C
+signal.signal(signal.SIGTERM, signal_handler)  # kill/terminate
+
 def build_frame(cmd, addr, value):
     
     # bits 15-13 : cmd (3 bits)
@@ -77,7 +124,7 @@ def read_register(addr):
     resp = spi.xfer2([0x00, 0x00])                       # dumby write to read response
     sleep(0.05)
     # print("raw read response: ", resp)
-    check_adr = resp[1] & 0x1F
+    check_adr = (resp[1] >> 5) & 0x07                    # extract address bits for verification
     print(f"Requested address: {addr}, Received address: {check_adr}")
     return resp[1]
 
@@ -104,14 +151,20 @@ def set_zero_position():
     print(f"Write Zero Setting MSB Response: {resp1}, {resp2}")
 
 # check to ensure read operation works for registers
-read_register(0x1A)
-sleep(0.05)
+# read_register(0x1A)
+# sleep(0.05)
 
 # Adjust magnet ratio as needed for accurate
 # set_magnet_ratio(0x00, 0x00)
 
-# test for continuous angle measurement
-while True:
+################# Main loop to read angle #######################
+
+# ask user for how long to run (seconds). 0 = infinite
+duration_s = int(input("Run duration in seconds (0 for infinite): ") or 0)
+end_time = (time() + duration_s) if duration_s > 0 else None
+
+# run until time expires (or forever if end_time is None)
+while end_time is None or time() < end_time:
     raw_bytes = spi.xfer2([Read_Angle, 0x00])              # returns [MSB, LSB]
     msb, lsb = raw_bytes[0], raw_bytes[1]                  # retrieve MSB and LSB
     raw16 = (msb << 8) | lsb                               # 16-bit integer from sensor
@@ -119,3 +172,5 @@ while True:
     
     print(f"raw16: {raw16} bytes: {raw_bytes}  angle_deg: {angle_deg:.3f}°")
     sleep(0.5)
+
+clean_up()
