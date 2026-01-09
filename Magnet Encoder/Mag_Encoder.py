@@ -47,7 +47,6 @@ Store_All_Registers = 0x06
 Restore_All_Registers = 0x05
 Clear_Error_Flag = 0x01
 
-
 # enable and disable pin control
 def enable_pin():
     en_pin.on()
@@ -101,7 +100,6 @@ def build_frame(cmd, addr, value):
     addr &= 0x1F
     value &= 0xFF
     return (cmd << 13) | (addr << 8) | value
-
 def write_register(addr, value):
     frame = build_frame(Write_Command, addr, value)
     msb = (frame >> 8) & 0xFF
@@ -112,7 +110,6 @@ def write_register(addr, value):
     sleep(0.05)
     if resp2[1] != value:
         print("Error in write response: ", resp2)        # check that value is returned after write
-
 def read_register(addr):
     frame = build_frame(Read_Command, addr, 0x00)
     msb = (frame >> 8) & 0xFF
@@ -127,7 +124,6 @@ def read_register(addr):
     check_adr = (resp[1] >> 5) & 0x07                    # extract address bits for verification
     print(f"Requested address: {addr}, Received address: {check_adr}")
     return resp[1]
-
 def set_magnet_ratio(enable, bias_value):
     # set bias trimming current to adjust magnet ratio
     write_register(Bias_Trimming_Current, bias_value) 
@@ -153,7 +149,6 @@ def set_zero_position():
 # check to ensure read operation works for registers
 # read_register(0x1A)
 # sleep(0.05)
-
 # Adjust magnet ratio as needed for accurate
 # set_magnet_ratio(0x00, 0x00)
 
