@@ -1,0 +1,15 @@
+Mag_Encode_Readme
+
+Wire Color Coding for CN1 (SPI Interface):
+- SCK is Green
+- MOSI is Purple
+- MISO is Blue
+- CS is Yellow
+- Ground is Red
+- 3.3V is Brown
+- 5V is Black
+
+Raspberry Pi Login:
+- Username: pi
+- Password: berry
+
