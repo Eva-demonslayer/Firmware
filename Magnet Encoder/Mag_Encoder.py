@@ -58,6 +58,8 @@ Store_All_Registers = 0x06
 Restore_All_Registers = 0x05
 Clear_Error_Flag = 0x01
 
+# GPIO17 for enable pin
+Enable_GPIO =  17
 # enable and disable pin control
 def enable_pin():
     en_pin.on()
@@ -66,7 +68,7 @@ def disable_pin():
     en_pin.off()
     return en_pin.value
 try:
-    en_pin = DigitalOutputDevice(17, active_high=True, initial_value=True)  # high = sensor active
+    en_pin = DigitalOutputDevice(Enable_GPIO, active_high=True, initial_value=True)  # high = sensor active
     pin_state = enable_pin()
     print("Enable Pin State:", pin_state)
 except Exception as e:
@@ -170,7 +172,7 @@ sleep(0.05)
 # set zero position to current angle
 # set_zero_position()
 
-##################### Main loop to read angle #############################
+##################### TEST LOOP OR ANGULAR READING #############################
 
 # ask user for how long to run (seconds). 0 = infinite
 duration_s = int(input("Run duration in seconds (0 for infinite): ") or 0)

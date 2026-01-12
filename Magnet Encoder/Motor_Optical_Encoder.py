@@ -1,16 +1,25 @@
-################# Motor_Optical_Encoder ###################
+################# MOTOR OPTICAL ENCODER ###################
 ####################### TMC5130 ###########################
 
+import signal
+import sys
 import spidev
-from time import sleep
+from time import sleep, time
+import os
+os.environ["GPIOZERO_PIN_FACTORY"] = "lgpio" 
+from gpiozero import DigitalOutputDevice
+import atexit
+
 spi = spidev.SpiDev()
 spi.open(0,1)                   # specify the SPI bus and device (chip select)
 spi.mode = 0                    # spi mode 0 start. CPOL=0, CPHA=0.
 spi.max_speed_hz = 5000000      # assign SPI frequency, max clock rate 25 MHz
 
-position_bit = 5        # position reached
-home_bit = 6            # left home reached
-encode = 0              # Encoder value
+position_bit = 5                # position reached
+CW = 0x14                       # CW
+CCW = 0x04                      # CCW
+N_event = 26                    # GPIO of N channel for encoder
+microsteps = 16                 # microstepping value
 
 def configure(direction_bit):                           # configures all registers of motor
     spi.xfer2([0x80,0x00,0x00,0x00,direction_bit])      # EN_PWM_MODE=1 enables StealthChop2
@@ -37,34 +46,32 @@ def configure(direction_bit):                           # configures all registe
     # print("SW bits: ", SW_mode)
     # print("motor configured", direction_bit)
 def read_position():                                    # reads actual position from motor
-    home_check = 0
     position_check = 0
     sleep(.05)
-    while bool(position_check) == False and bool(home_check) == False:
-        spi.xfer2([0x00,0x00,0x00,0x00,0x00])                           # throw out 1st read
+    while bool(position_check) == False:                # loop until position reached bit is set
+        spi.xfer2([0x00,0x00,0x00,0x00,0x00])           # throw out 1st read
         sleep(.05)
-        read_data = spi.xfer2([0x00,0x00,0x00,0x00,0x00])               # SPI_STATUS
+        read_data = spi.xfer2([0x00,0x00,0x00,0x00,0x00])
         sleep(.05)
         hex_data = int(read_data[0])
-        position_check=(hex_data >> position_bit) & 1                   # bitwise AND operation with a mask of 1
-        home_check=(hex_data >> home_bit) & 1                           # bitwise AND operation with a mask of 1
+        position_check=(hex_data >> position_bit) & 1   # bitwise AND operation with a mask of 1
 def reset_position():                                   # resets actual position to 0        
     spi.xfer2([0xA1,0x00,0x00,0x00,0x00])               # XACTUAL reset
     sleep(0.05)
 def single_move(displacement):                          # single move command to motor
     reset_position()
     print("Single move in degrees:", displacement)
-    disp = displacement * (16)                  # microstepping... and divide by 2?
+    disp = (displacement * microsteps)/1.8                        # microstepping... and divide by full step angle 1.8
     disp = int(disp)
-    #print("actual position as decimal", disp)
-    read_data = spi.xfer2([0x2D,0x00,0x00,0x00,0x00])   # throw out 1st read
-    sleep (0.05)
-    read_data = spi.xfer2([0x2D,0x00,0x00,0x00,0x00])   # second read, actual position
-    #print("actual position", read_data)
+    # print("actual position as decimal", disp)
+    # read_position = spi.xfer2([0x2D,0x00,0x00,0x00,0x00])       # throw out 1st read
+    # sleep (0.05)
+    # read_position = spi.xfer2([0x2D,0x00,0x00,0x00,0x00])       # second read, actual position
+    # print("actual position", read_position)
     if disp < 255:
         my_list = [0xAD,0x00,0x00,0x00]
         my_list.append(disp)
-    elif displacement < 65535:                          # was "displacement", changed it to disp
+    elif disp < 65535:                                  
         my_list = [0xAD,0x00,0x00]
         hex_str = hex(disp)[2:]
         hex_str = hex_str.zfill(4)
@@ -91,24 +98,34 @@ def encoder_config():                                   # configures encoder reg
     #clr_cont =  Always latch or latch and clear X_ENC upon an N event
     #encoder prescaler divisor binary mode
     #clr_enc_x = 1, latch and additionally clear encoder counter X_ENC at N-event
-    spi.xfer2([0xBA,0x00,0x01,0x1C,0x71]) #Accumulation constant, current microstepping. X_ENC accumulates +/- ENC_CONST / (2^16*X_ENC) (binary)
+    spi.xfer2([0xBA,0x00,0x01,0x1C,0x71]) # Accumulation constant, current microstepping. X_ENC accumulates +/- ENC_CONST / (2^16*X_ENC) (binary)
 def reset_encoder():                                    # resets encoder position to 0
-    encoder_config()
-    sleep(0.05)
-    N=16
-    GPIO.output(N, GPIO.HIGH)                           # triggers N event and clears X_ENC
-    sleep(0.1)
-    GPIO.output(N, GPIO.LOW)
-    sleep(0.1)
+    def enable_pin():
+        en_pin.on()
+        return en_pin.value
+    def disable_pin():
+        en_pin.off()
+        return en_pin.value
+    try:
+        en_pin = DigitalOutputDevice(N_event, active_high=True, initial_value=True)  # high = sensor active
+        pin_state = enable_pin()
+        print("Enable Pin State:", pin_state)
+        sleep(0.1)
+        pin_state = disable_pin()
+        print("Enable Pin State:", pin_state)
+    except Exception as e:
+        # If claiming the pin fails, do nothing (leave en_pin as None)
+        en_pin = None
+        print(f"Warning: could not claim GPIO26: {e}")
     status = spi.xfer2([0x3B,0x00,0x00,0x00,0x00])      # throw out 1st read
     sleep(0.3)
     status = spi.xfer2([0x3B,0x00,0x00,0x00,0x00])      # ENC_Status, Read and Clear
     print("Encoder Position Cleared")
     sleep(0.3)
-    print("N Status after low polarity. Bit1=N event detected", status)
-    enc_latch = spi.xfer2([0x3C,0x00,0x00,0x00,0x00])   # throw out 1st read
-    sleep(1.5)
-    enc_latch = spi.xfer2([0x3C,0x00,0x00,0x00,0x00])   # Encoder position X_ENC latched on N event
+    print("N Status after low polarity. Bit1=N event detected ", status)
+    # enc_latch = spi.xfer2([0x3C,0x00,0x00,0x00,0x00]) # throw out 1st read
+    # sleep(1.5)
+    # enc_latch = spi.xfer2([0x3C,0x00,0x00,0x00,0x00]) # Encoder position X_ENC latched on N event
 def read_encoder():                                     # reads actual encoder position
     x_enc = spi.xfer2([0x39,0x00,0x00,0x00,0x00])       # throw out 1st read
     sleep(0.05)
@@ -123,16 +140,53 @@ def read_encoder():                                     # reads actual encoder p
     enc_cycles = int(combine_str,16)                    # change to hex, and then back to integer
     if enc_cycles >= 32768:                             # Check to see if this number is a negative number
         enc_cycles -= 65536                             # If so, compensate it with 65536
-    distance = enc_cycles/((16))                            # current micro step and divided by 2 same as position command?
+    distance = enc_cycles/((microsteps))                # current micro step and divided by 2 same as position command?
     print("x_enc in degrees:", distance)
     return distance
 
-def motor_move(move_direction, revolution):             # main function to move motor
-    configure(move_direction)                           # configure motor with direction  
+def motor_move(move_direction, angular_displacement):   # main function to move motor
+    configure(move_direction)                           # configure motor with direction and settings
     reset_position()                                    # reset position motor position to 0
+    encoder_config()                                    # configure encoder registers
     reset_encoder()                                     # reset encoder position to 0
-    single_move(revolution)                             # single move command with displacement
+    single_move(angular_displacement)                   # single move command with displacement
     read_position()                                     # read intended motor position
-    angular_disp = read_encoder()                       # read encoder position
-    print("Encoder position in degrees:", angular_disp)
-    return angular_disp                                 # return encoder position for comparison
+    encoder_disp = read_encoder()                       # read encoder position
+    return encoder_disp                                 # return encoder position for comparison
+
+# cleanup function to release resources
+def clean_up():
+    """cleanup for en_pin and spi"""
+    for name in ("en_pin", "spi"):
+        obj = globals().get(name)
+        if obj is None:
+            continue
+        try:
+            # turn off if available (safe no-op if not)
+            getattr(obj, "off", lambda: None)()
+        except Exception:
+            pass
+        try:
+            # close if available
+            getattr(obj, "close", lambda: None)()
+        except Exception:
+            pass
+atexit.register(clean_up)
+
+# ensure cleanup on SIGINT / SIGTERM and on normal exit
+def signal_handler(*_):
+    try:
+        clean_up()
+    finally:
+        sys.exit(0)
+signal.signal(signal.SIGINT, signal_handler)            # Ctrl-C
+signal.signal(signal.SIGTERM, signal_handler)           # kill/terminate
+
+################## TEST CODE FOR MOTOR/ENCOER FUNCTION ######################
+
+encoder_value = motor_move(CW, 90)                      # move motor CW 90 degrees
+print("Encoder position in degrees:", encoder_value)
+sleep(0.5)
+encoder_value = motor_move(CCW, 90)                     # move motor CCW 90 degrees
+print("Encoder position in degrees:", encoder_value)
+sleep(0.5)
