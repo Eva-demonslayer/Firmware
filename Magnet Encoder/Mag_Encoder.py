@@ -23,21 +23,30 @@ Store_All_Registers = 0xC0
 Restore_All_Registers = 0xA0    
 Clear_Error_Flag = 0x20         
 
-# register map
-Zero_Setting_LSB = 0x00
-Zero_Setting_MSB = 0x01
-Bias_Trimming_Current = 0x02
-Enable_Trimming_Current = 0x03
-Cycle_Time_LSB = 0x04
-Cycle_Time_MSB = 0x05
-Filter_Settings = 0x06
-On_Time = 0x07
-Threshold = 0x08
-Rotation_Direction = 0x09
-Reference = 0xA
-ASC_ASCR_FW = 0xB
-Multi_turns = 0x16
-Eeprom = 0x1A
+# registry for address->name lookup
+REGISTER_NAMES = {}
+
+def reg(name: str, value: int) -> int:
+    """Create a global constant named `name` with `value` and record its name."""
+    globals()[name] = value
+    REGISTER_NAMES[value] = name
+    return value
+
+# register map addresses
+Zero_Setting_LSB = reg("Zero_Setting_LSB", 0x00)
+Zero_Setting_MSB = reg("Zero_Setting_MSB", 0x01)
+Bias_Trimming_Current = reg("Bias_Trimming_Current", 0x02)
+Enable_Trimming_Current = reg("Enable_Trimming_Current", 0x03)
+Cycle_Time_LSB = reg("Cycle_Time_LSB", 0x04)
+Cycle_Time_MSB = reg("Cycle_Time_MSB", 0x05)
+Filter_Settings = reg("Filter_Settings", 0x06)
+On_Time = reg("On_Time", 0x07)
+Threshold = reg("Threshold", 0x08)
+Rotation_Direction = reg("Rotation_Direction", 0x09)
+Reference = reg("Reference", 0x0A)
+ASC_ASCR_FW = reg("ASC_ASCR_FW", 0x0B)
+Multi_turns = reg("Multi_turns", 0x16)
+Eeprom = reg("Eeprom", 0x1A)
 
 # write register operation is two 16 bit frames
 # first frame is 3 bit write command, followed by 5 bit register address
@@ -152,11 +161,14 @@ def set_zero_position():
     print(f"Write Zero Setting MSB Response: {resp1}, {resp2}")
 
 # check to ensure read operation works for registers
-read_register(Filter_Settings)     
+read_register(Filter_Settings)   
 sleep(0.05)
 
 # Adjust magnet ratio as needed for accurate
 # set_magnet_ratio(0x00, 0x00)
+
+# set zero position to current angle
+# set_zero_position()
 
 ##################### Main loop to read angle #############################
 
