@@ -14,6 +14,7 @@ spi.open(0,0)                   # specify the SPI bus and device (chip select)
 spi.mode = 0                    # spi mode 0 start. CPOL=0, CPHA=0.
 spi.max_speed_hz = 5000000      # assign SPI frequency, max clock rate 25 MHz for MA780
 
+# command set
 Read_Angle = 0x00               # returns angle value (16 bits)
 Read_Register = 0x02            # returns 8-bit angle + register value
 Write_Register = 0x04           
@@ -29,6 +30,7 @@ Bias_Trimming_Current = 0x02
 Enable_Trimming_Current = 0x03
 Cycle_Time_LSB = 0x04
 Cycle_Time_MSB = 0x05
+Filter_Settings = 0x06
 On_Time = 0x07
 Threshold = 0x08
 Rotation_Direction = 0x09
@@ -63,6 +65,7 @@ except Exception as e:
     en_pin = None
     print(f"Warning: could not claim GPIO17: {e}")
 
+# cleanup function to release resources
 def clean_up():
     """cleanup for en_pin and spi"""
     for name in ("en_pin", "spi"):
@@ -90,6 +93,7 @@ def signal_handler(*_):
 signal.signal(signal.SIGINT, signal_handler)   # Ctrl-C
 signal.signal(signal.SIGTERM, signal_handler)  # kill/terminate
 
+# build 16-bit frame for read/write operations
 def build_frame(cmd, addr, value):
     
     # bits 15-13 : cmd (3 bits)
@@ -114,16 +118,17 @@ def read_register(addr):
     frame = build_frame(Read_Command, addr, 0x00)
     msb = (frame >> 8) & 0xFF
     msb_check = (msb & 0xE0) >> 5                        # extract command bits for verification
-    print("read command: ", msb_check)                   # should be 0b010 for read
+    print("Read Command: ", msb_check)                   # should be 0b010 for read
     lsb = frame & 0xFF
     spi.xfer2([msb, lsb])
     sleep(0.05)
     resp = spi.xfer2([0x00, 0x00])                       # dumby write to read response
     sleep(0.05)
-    # print("raw read response: ", resp)
-    check_adr = (resp[1] >> 5) & 0x07                    # extract address bits for verification
-    print(f"Requested address: {addr}, Received address: {check_adr}")
+    # print("Current Angle Value: ", resp[0])          
+    print("Values stored in register: ", resp[1])        # values stored in register
     return resp[1]
+
+# set magnet ratio adjustment
 def set_magnet_ratio(enable, bias_value):
     # set bias trimming current to adjust magnet ratio
     write_register(Bias_Trimming_Current, bias_value) 
@@ -147,12 +152,13 @@ def set_zero_position():
     print(f"Write Zero Setting MSB Response: {resp1}, {resp2}")
 
 # check to ensure read operation works for registers
-# read_register(0x1A)
-# sleep(0.05)
+read_register(Filter_Settings)     
+sleep(0.05)
+
 # Adjust magnet ratio as needed for accurate
 # set_magnet_ratio(0x00, 0x00)
 
-################# Main loop to read angle #######################
+##################### Main loop to read angle #############################
 
 # ask user for how long to run (seconds). 0 = infinite
 duration_s = int(input("Run duration in seconds (0 for infinite): ") or 0)
