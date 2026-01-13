@@ -178,7 +178,7 @@ def read_encoder():                                     # reads actual encoder p
     if enc_cycles >= 32768:                             # Check to see if this number is a negative number
         enc_cycles -= 65536                             # If so, compensate it with 65536
     distance = enc_cycles/((microsteps/1.8))            # current micro step and divided by full steps per degree
-    print("x_enc in degrees:", distance)
+    # print("x_enc in degrees:", distance)
     return distance
 
 ################## TEST CODE FOR MOTOR/ENCOER FUNCTION ######################
@@ -186,7 +186,7 @@ def read_encoder():                                     # reads actual encoder p
 configure(CW)                                            # configure motor with direction and settings
 reset_position()                                         # reset motor position to 0
 single_move(0)
-sleep(1)
+sleep(0.1)
 
 encoder_config()                                        # configure encoder settings
 sleep(0.1)
@@ -197,6 +197,6 @@ for i in range(4):
     encoder_value = single_move(90)                     # move motor CW 360 degrees
     read_position()                                     # read intended motor position
     print("Encoder position in degrees:", encoder_value)
-    sleep(0.1)
+    sleep(0.2)
 
 clean_up()                                              # cleanup resources    
