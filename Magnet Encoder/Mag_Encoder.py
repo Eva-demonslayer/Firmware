@@ -9,10 +9,10 @@ os.environ["GPIOZERO_PIN_FACTORY"] = "lgpio"
 from gpiozero import DigitalOutputDevice
 import atexit
 
-spi = spidev.SpiDev()
-spi.open(0,0)                   # specify the SPI bus and device (chip select)
-spi.mode = 0                    # spi mode 0 start. CPOL=0, CPHA=0.
-spi.max_speed_hz = 5000000      # assign SPI frequency, max clock rate 25 MHz for MA780
+spi1 = spidev.SpiDev()
+spi1.open(0,0)                   # specify the SPI bus and device (chip select)
+spi1.mode = 0                    # spi mode 0 start. CPOL=0, CPHA=0.
+spi1.max_speed_hz = 5000000      # assign SPI frequency, max clock rate 25 MHz for MA780
 
 # command set
 Read_Angle = 0x00               # returns angle value (16 bits)
@@ -119,9 +119,9 @@ def write_register(addr, value):
     frame = build_frame(Write_Command, addr, value)
     msb = (frame >> 8) & 0xFF
     lsb = frame & 0xFF
-    spi.xfer2([msb, lsb])
+    spi1.xfer2([msb, lsb])
     sleep(0.05)
-    resp2 = spi.xfer2([0x00, 0x00])                      # dumby write to read response
+    resp2 = spi1.xfer2([0x00, 0x00])                      # dumby write to read response
     sleep(0.05)
     if resp2[1] != value:
         print("Error in write response: ", resp2)        # check that value is returned after write
@@ -131,9 +131,9 @@ def read_register(addr):
     msb_check = (msb & 0xE0) >> 5                        # extract command bits for verification
     print("Read Command: ", msb_check)                   # should be 0b010 for read
     lsb = frame & 0xFF
-    spi.xfer2([msb, lsb])
+    spi1.xfer2([msb, lsb])
     sleep(0.05)
-    resp = spi.xfer2([0x00, 0x00])                       # dumby write to read response
+    resp = spi1.xfer2([0x00, 0x00])                       # dumby write to read response
     sleep(0.05)
     # print("Current Angle Value: ", resp[0])          
     print("Values stored in register: ", resp[1])        # values stored in register
@@ -174,7 +174,7 @@ sleep(0.05)
 
 ##################### TEST LOOP OR ANGULAR READING #############################
 
-def test_loop():
+def read_angle():
     # ask user for how long to run (seconds). 0 = infinite
     duration_s = int(input("Run duration in seconds (0 for infinite): ") or 0)
     end_time = (time() + duration_s) if duration_s > 0 else None
@@ -193,4 +193,4 @@ def test_loop():
 
 # run test loop if executed as main script
 if __name__ == "__main__":
-    test_loop()
+    read_angle()

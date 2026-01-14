@@ -8,8 +8,14 @@ Wire Color Coding for CN1 (SPI Interface):
 - Ground is Red
 - 3.3V is Brown
 - 5V is Black
+- N channel is Grey
+- 
 
 Raspberry Pi Login:
 - Username: pi
 - Password: berry
+
+SPI Bus:
+- Chip Select 0 is Magnetic Encoder
+- Chip Select 1 is TMC Motor Driver
 
