@@ -183,20 +183,25 @@ def read_encoder():                                     # reads actual encoder p
 
 ################## TEST CODE FOR MOTOR/ENCOER FUNCTION ######################
 
-configure(CW)                                            # configure motor with direction and settings
-reset_position()                                         # reset motor position to 0
-single_move(0)
-sleep(0.1)
+def test_loop():
+    configure(CW)                                            # configure motor with direction and settings
+    reset_position()                                         # reset motor position to 0
+    single_move(0)
+    sleep(0.1)
 
-encoder_config()                                        # configure encoder settings
-sleep(0.1)
-reset_encoder()                                         # reset encoder position to 0
-sleep(0.1)                        
+    encoder_config()                                        # configure encoder settings
+    sleep(0.1)
+    reset_encoder()                                         # reset encoder position to 0
+    sleep(0.1)                        
 
-for i in range(4):       
-    encoder_value = single_move(90)                     # move motor CW 360 degrees
-    read_position()                                     # read intended motor position
-    print("Encoder position in degrees:", encoder_value)
-    sleep(0.2)
+    for i in range(4):       
+        encoder_value = single_move(90)                     # move motor CW 360 degrees
+        read_position()                                     # read intended motor position
+        print("Encoder position in degrees:", encoder_value)
+        sleep(0.2)
 
-clean_up()                                              # cleanup resources    
+    clean_up()                                              # cleanup resources    
+
+#  run test loop if executed as main program
+if __name__ == "__main__":              
+    test_loop()                                             

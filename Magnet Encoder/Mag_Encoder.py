@@ -174,18 +174,23 @@ sleep(0.05)
 
 ##################### TEST LOOP OR ANGULAR READING #############################
 
-# ask user for how long to run (seconds). 0 = infinite
-duration_s = int(input("Run duration in seconds (0 for infinite): ") or 0)
-end_time = (time() + duration_s) if duration_s > 0 else None
+def test_loop():
+    # ask user for how long to run (seconds). 0 = infinite
+    duration_s = int(input("Run duration in seconds (0 for infinite): ") or 0)
+    end_time = (time() + duration_s) if duration_s > 0 else None
 
-# run until time expires (or forever if end_time is None)
-while end_time is None or time() < end_time:
-    raw_bytes = spi.xfer2([Read_Angle, 0x00])              # returns [MSB, LSB]
-    msb, lsb = raw_bytes[0], raw_bytes[1]                  # retrieve MSB and LSB
-    raw16 = (msb << 8) | lsb                               # 16-bit integer from sensor
-    angle_deg = raw16 * (359.995 / 65535)                  # map 16-bit 
+    # run until time expires (or forever if end_time is None)
+    while end_time is None or time() < end_time:
+        raw_bytes = spi.xfer2([Read_Angle, 0x00])              # returns [MSB, LSB]
+        msb, lsb = raw_bytes[0], raw_bytes[1]                  # retrieve MSB and LSB
+        raw16 = (msb << 8) | lsb                               # 16-bit integer from sensor
+        angle_deg = raw16 * (359.995 / 65535)                  # map 16-bit 
     
-    print(f"raw16: {raw16} bytes: {raw_bytes}  angle_deg: {angle_deg:.3f}°")
-    sleep(0.5)
+        print(f"raw16: {raw16} bytes: {raw_bytes}  angle_deg: {angle_deg:.3f}°")
+        sleep(0.5)
 
-clean_up()
+    clean_up()
+
+# run test loop if executed as main script
+if __name__ == "__main__":
+    test_loop()
