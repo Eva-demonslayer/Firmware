@@ -69,9 +69,9 @@ def disable_pin():
     en_pin.off()
     return en_pin.value
 try:
-    en_pin = DigitalOutputDevice(Enable_GPIO, active_high=True, initial_value=True)  # high = sensor active
-    pin_state = enable_pin()
-    print("Enable Pin State:", pin_state)
+    en_pin = DigitalOutputDevice(Enable_GPIO, active_high=True, initial_value=False)
+    # ensure pin is low (sensor inactive) at start
+    disable_pin() 
 except Exception as e:
     # If claiming the pin fails, do nothing (leave en_pin as None)
     en_pin = None
@@ -102,8 +102,8 @@ def signal_handler(*_):
         clean_up()
     finally:
         sys.exit(0)
-signal.signal(signal.SIGINT, signal_handler)   # Ctrl-C
-signal.signal(signal.SIGTERM, signal_handler)  # kill/terminate
+signal.signal(signal.SIGINT, signal_handler)        # Ctrl-C
+signal.signal(signal.SIGTERM, signal_handler)       # kill/terminate
 
 # build 16-bit frame for read/write operations
 def build_frame(cmd, addr, value):
@@ -116,29 +116,39 @@ def build_frame(cmd, addr, value):
     addr &= 0x1F
     value &= 0xFF
     return (cmd << 13) | (addr << 8) | value
-def write_register(addr, value):
-    frame = build_frame(Write_Command, addr, value)
-    msb = (frame >> 8) & 0xFF
-    lsb = frame & 0xFF
-    spi1.xfer2([msb, lsb])
-    sleep(0.05)
-    resp2 = spi1.xfer2([0x00, 0x00])                      # dumby write to read response
-    sleep(0.05)
-    if resp2[1] != value:
-        print("Error in write response: ", resp2)        # check that value is returned after write
 def read_register(addr):
     frame = build_frame(Read_Command, addr, 0x00)
     msb = (frame >> 8) & 0xFF
-    msb_check = (msb & 0xE0) >> 5                        # extract command bits for verification
-    print("Read Command: ", msb_check)                   # should be 0b010 for read
     lsb = frame & 0xFF
-    spi1.xfer2([msb, lsb])
+    spi1.xfer2([msb, lsb])                          # send read command
     sleep(0.05)
-    resp = spi1.xfer2([0x00, 0x00])                       # dumby write to read response
-    sleep(0.05)
-    # print("Current Angle Value: ", resp[0])          
-    print("Values stored in register: ", resp[1])        # values stored in register
+    resp = spi1.xfer2([0x00, 0x00])                 # dummy read to get register value
+    sleep(0.01)
+    print(f"{REGISTER_NAMES.get(addr, '')}: {resp[1]}")
     return resp[1]
+def write_register(addr, value):
+    # Check if en_pin exists and is off (LOW)
+    if en_pin is not None and en_pin.value:
+        print("Warning: Enable pin is ON (sensor active). Register write should be done with sensor in idle (enable pin OFF).")
+        return None
+    
+    frame = build_frame(Write_Command, addr, value)
+    msb = (frame >> 8) & 0xFF
+    lsb = frame & 0xFF
+    print(f"Frame built: 0x{frame:04X}")                 # print the frame for debugging
+    spi1.xfer2([msb, lsb])                               # write command
+    sleep(0.05)
+    resp2 = spi1.xfer2([0x00, 0x00])                     # dummy read to get write response
+    sleep(0.05)
+    if resp2[1] != (value & 0xFF):
+        print("Error in write response: ", resp2[1])     # check that register value is returned after write
+    
+    # Check error flags after every write
+    error_flags = read_register(Eeprom)
+    if error_flags != 0x00:
+        print(f"Warning: Error flags: 0x{error_flags:02X}")
+    
+    return resp2[1]
 
 # set magnet ratio adjustment
 def set_magnet_ratio(enable, bias_value):
@@ -149,49 +159,89 @@ def set_magnet_ratio(enable, bias_value):
     write_register(Enable_Trimming_Current, enable)
     sleep(0.05)
 
+# read angle in degrees
+def read_angle():
+    raw_bytes = spi1.xfer2([Read_Angle, 0x00])             # returns [MSB, LSB]
+    msb, lsb = raw_bytes[0], raw_bytes[1]                  # retrieve MSB and LSB
+    raw16 = (msb << 8) | lsb                               # 16-bit integer from sensor
+    angle_deg = raw16 * (359.995 / 65535)                  # map 16-bit 
+    print(f"raw16: {raw16} bytes: {raw_bytes}  angle_deg: {angle_deg:.3f}°")
+    sleep(0.5)
+    return angle_deg
+
 # set zero position to current angle
 def set_zero_position():
-    raw_bytes = spi1.xfer2([Read_Angle, 0x00])       # returns [MSB, LSB]
+    pin_state = enable_pin()
+    print("Enable Pin State:", pin_state)
+    sleep(0.5)      
+    print("Clearing...")
+    for i in range(3):                              # take multiple readings to ensure angle is updated
+        read_angle()                          
+    raw_bytes = spi1.xfer2([Read_Angle, 0x00])      # returns [MSB, LSB]
     msb, lsb = raw_bytes[0], raw_bytes[1]           # retrieve MSB and LSB
-    raw16 = (msb << 8) | lsb                        # 16-bit integer from sensor
-    zero_lsb = raw16 & 0xFF                         # LSB for zero setting
-    zero_msb = (raw16 >> 8) & 0xFF                  # MSB for zero setting
-
-    print(f"Setting zero position to raw16: {raw16} bytes: {raw_bytes}")
-    resp1, resp2 = write_register(Zero_Setting_LSB, zero_lsb)
-    print(f"Write Zero Setting LSB Response: {resp1}, {resp2}")
-    resp1, resp2 = write_register(Zero_Setting_MSB, zero_msb)
-    print(f"Write Zero Setting MSB Response: {resp1}, {resp2}")
+    pin_state = disable_pin()
+    print("Disable Pin State:", pin_state)
+    sleep(0.5)
+    write_register(Zero_Setting_LSB, lsb)
+    print("Zero LSB Written:", lsb)
+    sleep(0.5)
+    write_register(Zero_Setting_MSB, msb)
+    print("Zero MSB Written:", msb)
+    # Read back both zero registers to verify
+    read_register(Zero_Setting_LSB)
+    read_register(Zero_Setting_MSB)
 
 # check to ensure read operation works for registers
-read_register(Filter_Settings)   
-sleep(0.05)
+# read_register(Filter_Settings)   
+# sleep(0.05)
 
 # Adjust magnet ratio as needed for accurate
 # set_magnet_ratio(0x00, 0x00)
 
-# set zero position to current angle
-# set_zero_position()
+##################### set zero position to current angle #######################
+write_register(ASC_ASCR_FW, 0x00)                   # disable ASC/ASCR firmware control 
+read_register(ASC_ASCR_FW)                          # verify ASC/ASCR firmware control disabled
+eeprom_val = read_register(Eeprom)                  # check EEPROM register before zeroing
+
+# Set rotation direction before zeroing
+write_register(Rotation_Direction, 0x00)            # set rotation direction (0x00 = default direction)
+read_register(Rotation_Direction)                   # verify rotation direction
+
+# set zero position
+angle = read_angle()
+if abs(angle) < 1.0:  # threshold for "very close to zero"
+    print("Angle is very close to zero; skipping zero reset.")
+else:
+    set_zero_position()
+    print("Zero position set to current angle.")
 
 ##################### TEST LOOP OR ANGULAR READING #############################
 
-def read_angle():
+def test_loop():
+
+    # enable active mode if en_pin is available
+    pin_state = enable_pin()
+    print("Enable Pin State:", pin_state)
+    sleep(0.5)
+
     # ask user for how long to run (seconds). 0 = infinite
     duration_s = int(input("Run duration in seconds (0 for infinite): ") or 0)
     end_time = (time() + duration_s) if duration_s > 0 else None
 
     # run until time expires (or forever if end_time is None)
     while end_time is None or time() < end_time:
-        raw_bytes = spi1.xfer2([Read_Angle, 0x00])              # returns [MSB, LSB]
+        raw_bytes = spi1.xfer2([Read_Angle, 0x00])             # returns [MSB, LSB]
         msb, lsb = raw_bytes[0], raw_bytes[1]                  # retrieve MSB and LSB
         raw16 = (msb << 8) | lsb                               # 16-bit integer from sensor
         angle_deg = raw16 * (359.995 / 65535)                  # map 16-bit 
-    
         print(f"raw16: {raw16} bytes: {raw_bytes}  angle_deg: {angle_deg:.3f}°")
         sleep(0.5)
 
+    # disable active mode if en_pin is available
+    pin_state = disable_pin()
+    print("Disable Pin State:", pin_state)
     clean_up()
 
 # run test loop if executed as main script
 if __name__ == "__main__":
-    read_angle()
+    test_loop()
