@@ -10,8 +10,6 @@ Wire Color Coding for CN1 (SPI Interface):
 - 5V is Black
 - GPIOs are Grey
 
-ASC is currently wired to ground to ensure ASC mode is not used
-
 Raspberry Pi Login:
 - Username: pi
 - Password: berry
@@ -20,3 +18,8 @@ SPI Bus:
 - Chip Select 0 is Magnetic Encoder
 - Chip Select 1 is TMC Motor Driver
 
+Notes on Magnet Encoder Development:
+- ASC is currently wired to ground to ensure ASC mode is not used. However, it is recommended for easy transitions between Active and Idle Mode. Currently is it done manually with a GPIO.
+- There is a bug that doesn't allow the current code to set the zero twice. A power cycle is required. This should be possible with some refinement and monitoring of the "New Data Pin" in ASC mode.
+- Currently the zero setting is not stored in NVM, permanent memory which persists after a power cycle. However, this would be necessary for the product. The NVM pin is tied to ground for now.
+- Recommend using "DV Pin" to ensure digital filter has stabilzied. Not currently part of the code. For the sake of bring-up, I'm using an excessive amount of sleep commands in between functionality.

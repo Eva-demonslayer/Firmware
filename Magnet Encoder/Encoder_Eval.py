@@ -4,9 +4,14 @@ import Mag_Encoder as mag
 import Motor_Optical_Encoder as motor
 from time import sleep
 
-# rotation direction settings
-CW = 0x14                       # CW
-CCW = 0x04                      # CCW
+# rotation direction settings (cw for clockwise, ccw for counter-clockwise)
+CW = 0x14                       
+CCW = 0x04                      
+
+# Test parameters
+test_loop_iterations = 4
+sleep_time = 0.1
+test_angle = 90
 
 def eval_enc():
 
@@ -17,17 +22,17 @@ def eval_enc():
     sleep(1)
 
     # Initialize Magnet Encoder
-    mag.set_zero_position()
-    sleep(0.1)
+    mag.initialize_zero_position()
+    sleep(sleep_time)
     mag.read_angle()
-    sleep(0.1)
+    sleep(sleep_time)
 
     # Move Motor and Read Magnet Encoder
-    for i in range(4):    
-        motor.single_move(90)
+    for i in range(test_loop_iterations):    
+        motor.single_move(test_angle)
         motor.read_position()
-        sleep(0.1)
+        sleep(sleep_time)
         mag.read_angle()
-        sleep(0.1)
+        sleep(sleep_time)
 
 eval_enc()

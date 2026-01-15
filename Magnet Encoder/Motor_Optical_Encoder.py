@@ -181,8 +181,7 @@ def read_encoder():                                     # reads actual encoder p
     # print("x_enc in degrees:", distance)
     return distance
 
-################## TEST CODE FOR MOTOR/ENCOER FUNCTION ######################
-
+# Test code for Motor/Encoder integration
 def test_loop():
     configure(CW)                                            # configure motor with direction and settings
     reset_position()                                         # reset motor position to 0
@@ -202,6 +201,6 @@ def test_loop():
 
     clean_up()                                              # cleanup resources    
 
-#  run test loop if executed as main program
+# run test loop if executed as main program
 if __name__ == "__main__":              
     test_loop()                                             

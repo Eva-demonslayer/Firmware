@@ -143,8 +143,7 @@ def write_register(addr, value):
     if resp2[1] != (value & 0xFF):
         print("Error in write response: ", resp2[1])     # check that register value is returned after write
     
-    # Check error flags after every write
-    error_flags = read_register(Eeprom)
+    error_flags = read_register(Eeprom) & 0xFF           # Check error flags after every write
     if error_flags != 0x00:
         print(f"Warning: Error flags: 0x{error_flags:02X}")
     
@@ -198,25 +197,25 @@ def set_zero_position():
 # Adjust magnet ratio as needed for accurate
 # set_magnet_ratio(0x00, 0x00)
 
-##################### set zero position to current angle #######################
-write_register(ASC_ASCR_FW, 0x00)                   # disable ASC/ASCR firmware control 
-read_register(ASC_ASCR_FW)                          # verify ASC/ASCR firmware control disabled
-eeprom_val = read_register(Eeprom)                  # check EEPROM register before zeroing
+# set zero position to current angle
+def initialize_zero_position():
+    write_register(ASC_ASCR_FW, 0x00)                   # disable ASC/ASCR firmware control 
+    read_register(ASC_ASCR_FW)                          # verify ASC/ASCR firmware control disabled
+    read_register(Eeprom)                               # check EEPROM register before zeroing
 
-# Set rotation direction before zeroing
-write_register(Rotation_Direction, 0x00)            # set rotation direction (0x00 = default direction)
-read_register(Rotation_Direction)                   # verify rotation direction
+    # Set rotation direction before zeroing
+    write_register(Rotation_Direction, 0x00)            # set rotation direction (0x00 = default direction)
+    read_register(Rotation_Direction)                   # verify rotation direction
 
-# set zero position
-angle = read_angle()
-if abs(angle) < 1.0:  # threshold for "very close to zero"
-    print("Angle is very close to zero; skipping zero reset.")
-else:
-    set_zero_position()
-    print("Zero position set to current angle.")
+    # set zero position
+    angle = read_angle()
+    if abs(angle) < 1.0:                                # threshold for "very close to zero"
+        print("Angle is close to zero; skipping zero reset.")
+    else:
+        set_zero_position()
+        print("Zero position set to current angle.")
 
-##################### TEST LOOP OR ANGULAR READING #############################
-
+# Test loop for angular reading from sensor
 def test_loop():
 
     # enable active mode if en_pin is available
@@ -244,4 +243,5 @@ def test_loop():
 
 # run test loop if executed as main script
 if __name__ == "__main__":
+    initialize_zero_position()
     test_loop()
