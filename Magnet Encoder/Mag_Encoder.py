@@ -236,12 +236,11 @@ def test_loop():
         print(f"raw16: {raw16} bytes: {raw_bytes}  angle_deg: {angle_deg:.3f}°")
         sleep(0.5)
 
-    # disable active mode if en_pin is available
-    pin_state = disable_pin()
-    print("Disable Pin State:", pin_state)
-    clean_up()
-
 # run test loop if executed as main script
 if __name__ == "__main__":
     initialize_zero_position()
     test_loop()
+    # disable active mode if en_pin is available
+    pin_state = disable_pin()
+    print("Disable Pin State:", pin_state)
+    clean_up()
