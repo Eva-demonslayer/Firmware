@@ -170,7 +170,11 @@ def read_angle():
 
 # set zero position to current angle
 def set_zero_position():
-    pin_state = enable_pin()
+    print("Clearing zero position registers")
+    write_register(Zero_Setting_LSB,0x00)
+    write_register(Zero_Setting_MSB,0x00)
+    sleep(0.5)                   
+    pin_state = enable_pin()                        # active mode
     print("Enable Pin State:", pin_state)
     sleep(0.5)      
     print("Clearing...")
@@ -209,7 +213,7 @@ def initialize_zero_position():
 
     # set zero position
     angle = read_angle()
-    if abs(angle) < 1.0:                                # threshold for "very close to zero"
+    if abs(angle) < 0.5:                                # threshold for "very close to zero"
         print("Angle is close to zero; skipping zero reset.")
     else:
         set_zero_position()
@@ -224,7 +228,8 @@ def test_loop():
     sleep(0.5)
 
     # ask user for how long to run (seconds). 0 = infinite
-    duration_s = int(input("Run duration in seconds (0 for infinite): ") or 0)
+    # duration_s = int(input("Run duration in seconds (0 for infinite): ") or 0)
+    duration_s = 2  # default to 2 seconds for testing
     end_time = (time() + duration_s) if duration_s > 0 else None
 
     # run until time expires (or forever if end_time is None)
@@ -240,7 +245,6 @@ def test_loop():
 if __name__ == "__main__":
     initialize_zero_position()
     test_loop()
-    # disable active mode if en_pin is available
-    pin_state = disable_pin()
+    pin_state = disable_pin()                            # idle mode if en_pin is available
     print("Disable Pin State:", pin_state)
     clean_up()
