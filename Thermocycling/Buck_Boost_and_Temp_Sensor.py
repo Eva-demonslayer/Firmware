@@ -1,4 +1,5 @@
 ####################### THERMOCYCLING WITH BUCK BOOST AND TEMP SENSOR ####################
+####################################### LM25177 ##########################################
 
 from time import sleep, time
 import smbus2
@@ -165,5 +166,6 @@ thread2.start()
 # Wait for threads to complete
 thread1.join()
 thread2.join()
+
 
 print("Done!")
