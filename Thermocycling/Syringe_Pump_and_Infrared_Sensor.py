@@ -1,4 +1,5 @@
 ############################## Syringe Pump and Infrared Sensor ###########################
+################################## TMC5240 and MLX90614 ###################################
 
 from time import sleep, time
 import smbus2
@@ -258,5 +259,6 @@ def main(well_to_well_move, dwell_time):
             sleep (data_delay)
         print("Dwell...")
         sleep(dwell_time)
+
 
 main(300,1) # short term for testing
